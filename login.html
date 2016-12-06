@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<link rel="stylesheet" href="css/login.css">
+	<script type="text/javascript"src='js/userData.js'></script>
+	<script type="text/javascript"src='js/login.js'></script>
+</head>
+<body>
+	<form id="" method="post" action="index.html" onsubmit='return check()'>
+	<div class="container">
+		<input type="text"value='请输入用户名'id='username'name='formInput'onblur="if (this.value == '') {this.value = '请输入用户名';}" >
+		<input type="password"value='请输入密码'id='password'name='formInput'onblur="if (this.value == '') {this.value = '请输入密码';}" >
+		<input type="text"value='请输入验证码' id='code'name='formInput' onblur="if (this.value == '') {this.value = '请输入验证码';}" style='height:50px;' >
+		<div id='shua'>
+			<div id="text"></div>
+			<a href="javascript:void(0)"id='change'>刷新</a>
+		</div>
+		
+	
+		<input type="submit" value='登录'>
+		<a href="logon.html"id='reg'>注册</a>
+	</div>
+</form>
+</body>
+</html>

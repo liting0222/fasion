@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>查看留言</title>
+<!-- 视口设置 -->
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<!-- 引入bootstrap的css -->
+<link rel="stylesheet" type="text/css" href="js/bootstrap/css/bootstrap.css">
+<link rel="stylesheet" type="text/css" href="css/comment.css">
+<style type="text/css">
+	
+	/*.pagination {
+		background: rgba(0,0,0,0.1);
+	}
+*/
+	/*重写分页标签的样式*/
+	.pagination > li > a, .pagination > li > span {
+		color: #000;
+	}
+
+	.pagination > li > a:hover, .pagination > li > span:hover, .pagination > li > a:focus, .pagination > li > span:focus {
+		color: #000;
+	}
+
+	.pagination > .active > a, .pagination > .active > span, .pagination > .active > a:hover, .pagination > .active > span:hover, .pagination > .active > a:focus, .pagination > .active > span:focus {
+		border-color: #9CA593;
+		background: rgba(0,0,0,0.1);
+	}
+	
+</style>
+</head>
+<body>
+	
+	<div class="container">
+		<div class="row">
+			<div class="col-md-8">
+				<!-- 评论标题头开始 -->
+				<h3 class="page-header">
+					最新评论<span id="tRecordCount">0</span>条
+					<a href="InsertMsg.html" class="btn btn-success pull-right">我想说几句</a>
+				</h3>
+				<!-- 评论标题头结束 -->
+				<!-- 评论内容列表开始 -->
+				<div id="msg-wrapper">
+					<!--<div class="panel panel-success">
+						 <div class="panel-heading">
+			                发表的用户：<span class="username">tom</span>
+			                所在的地区：192.168.1.1
+			            </div>
+			            <div class="panel-body content">
+			                留言的内容
+			            </div>
+			            <div class="panel-footer text-right">
+			                <span class="pull-left">发表于：2016-11-7 13:00</span>
+			                <a href="javascript:;" class="btn btn-success btn-xs hit-btn">
+			                	顶 <span class="badge">11</span>
+			                </a>
+			                <a href="javascript:;" class="btn btn-success btn-xs update-btn" data-loading-text="修改中...">
+			                	修改
+			                </a>
+			                <a href="javascript:;" class="btn btn-danger btn-xs del-btn" data-loading-text="删除中...">
+			                	删除
+			                </a>
+			            </div> 
+					</div>-->
+				</div>
+				<!-- 评论内容列表结束 -->
+				<!-- 分页工具条开始 -->
+				<nav class="text-center" id="pagerTools">
+					<ul class="pagination">
+						<li><a href="javascript:;" id="pagerInfo"></a></li>
+						<li><a href="javascript:;" id="firstBtn">首页</a></li>
+						<li><a href="javascript:;" id="prevBtn">上页</a></li>						
+						<li><a href="javascript:;" id="nextBtn">下页</a></li>
+						<li><a href="javascript:;" id="lastBtn">末页</a></li>
+					</ul>
+				</nav>
+				<!-- 分页工具条结束 -->
+			</div>
+			<div class="col-md-4">
+				
+			</div>
+		</div>
+	</div>
+
+	<!-- 修改评论模态层开始  -->
+	<div class="modal fade" id="myModal">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal">&times;</button>
+					<h4>修改评论内容</h4>
+				</div>
+				<div class="modal-body">
+					<form id="form1" class="form-horizontal">
+						<div class="form-group">
+							<label for="" class="col-sm-2">用户名称</label>
+							<div class="col-sm-8">
+								<input type="text" name="username" id="username" placeholder="请输入用户名称" class="form-control">
+							</div>				
+						</div>
+						<div class="form-group">
+							<label for="" class="col-sm-2">评论内容</label>
+							<div class="col-sm-8">
+								<textarea name="content" id="content" cols="30" rows="10" placeholder="请输入评论内容，注意发言文明" class="form-control"></textarea>
+							</div>				
+						</div>	
+						<input type="hidden" name="id" id="id">					
+					</form>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-success" id="updateBtn" data-loading-text="修改中...">修改</button>
+					<button type="button" class="btn btn-danger" data-dismiss="modal">关闭</button>		
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- 修改评论模态层结束 -->
+
+	<!-- 引入juery.js -->
+	<script type="text/javascript" src="js/jquery.js"></script>
+	<!-- 引入bootstrap.js -->
+	<script type="text/javascript" src="js/bootstrap/js/bootstrap.js"></script>
+	<!-- 引入layer.js -->
+	<script type="text/javascript" src="js/layer/layer.js"></script>
+	<!-- 判断，如果是IE9以下，引入兼容h5标签的js文件，注意空格的位置 -->	
+	<!--[if lt IE 9]>
+	<script type="text/javascript" src="js/bootstrap/js/html5shiv.min.js"></script>
+	<script type="text/javascript" src="js/bootstrap/js/respond.min.js"></script>
+	<![end if] -->
+	<!-- 引入公共全局js -->
+	<script type="text/javascript" src="js/global.js"></script>
+	<script type="text/javascript">
+		
+		$(document).ready(function(){
+			
+			// 获得评论总数
+			$.getJSON(baseUrl + 'bbs/GetMsgCountServlet',function(json, textStatus) {				
+				// 设置评论总数
+				$('#tRecordCount').text(json.recordCount);
+			});
+
+			// 分页变量
+			var recordCount;//总记录数
+			var pageSize;//每页多少条
+			var pageCount;//共几页
+			var pageNum = 1;//当前页码
+
+			// 初始化第一页
+			getData();
+
+			/*
+				分页加载数据功能
+			*/
+			function getData() {
+				
+				$.getJSON(baseUrl + 'bbs/QueryMsgServlet', {pageNum:pageNum,pageSize:10}, function(json, textStatus) {
+					
+					var list = json.list;// 数据集合
+					var html = '';//拼接html字符串
+					var msgWrapper = $('#msg-wrapper');//评论列表容器
+
+					msgWrapper.empty();//清空容器列表
+
+					// 遍历数据集合，动态生成留言列表
+					$.each(list, function(index, el) {
+						
+						//拼接html代码
+						html = '<div class="panel panel-success">';
+						html += '	<div class="panel-heading">';
+						html += '        发表的用户：<span class="username">' + el.username + '</span>';
+						html += '        所在的地区：' + el.ip;
+						html += '   </div>';
+						html += '    <div class="panel-body content">';
+						html += el.content;
+						html += '    </div>';
+						html += '    <div class="panel-footer text-right">';
+						html += '        <span class="pull-left">发表于：' + el.createtime + '</span>';
+						html += '        <a data-id="' + el.id + '" href="javascript:;" class="btn btn-success btn-xs hit-btn">';
+						html += '        	顶 <span class="badge">' + el.hit + '</span>';
+						html += '        </a>';
+						html += '        <a data-id="' + el.id + '" href="javascript:;" class="btn btn-info btn-xs update-btn" data-loading-text="修改中...">';
+						html += '        	修改';
+						html += '        </a>';
+						html += '        <a data-id="' + el.id + '" href="javascript:;" class="btn btn-danger btn-xs del-btn" data-loading-text="删除中...">';
+						html += '        	删除';
+						html += '        </a>';
+						html += '    </div>';
+						html += '</div>';
+						
+						// 追加到评论列表中
+						msgWrapper.append(html);						
+					});
+
+					// 分页数据设置
+					recordCount = json.pager.recordCount;
+					pageSize = json.pager.pageSize;
+					pageCount = json.pager.pageCount;
+					pageNum = json.pager.pageNum;
+
+					// 设置分页信息
+					$('#pagerInfo').html('第' + pageNum + '/' + pageCount + '页');
+
+					// 动态显示分页按钮（首页 上页 下页 末页）
+					if (pageNum <= 1) {
+						$('#firstBtn').hide();
+						$('#prevBtn').hide();
+					} else {
+						$('#firstBtn').show();
+						$('#prevBtn').show();
+					}
+
+					if (pageNum >= pageCount) {
+						$('#nextBtn').hide();
+						$('#lastBtn').hide();
+					} else {
+						$('#nextBtn').show();
+						$('#lastBtn').show();
+					}
+
+					// 动态生成页码按钮
+					$('.pageNumBtn').parent().remove();
+
+					var start = pageNum - 2;
+					var end = pageNum + 2;
+
+					if (pageNum <= 3) {
+						start = 1;
+						end = 5;
+					}
+
+					if (pageNum >= pageCount - 2) {
+						end = pageCount;
+					}
+
+					for (var i = start;i <= end;i ++) {
+						html = '<li><a href="javascript:;" class="pageNumBtn">' + i + '</a></li>';
+						html = $(html);
+
+						// 当前页码高亮
+						if (i == pageNum)
+							html.addClass('active');
+
+						$('#nextBtn').parent().before(html);
+					}
+
+
+					// 滚动条自动定位到顶部
+					$('html,body').animate({scrollTop: $('#tRecordCount').offset().top}, 1000);
+
+				});				
+		
+			}
+
+			// 首页按钮单击
+			$('#firstBtn').click(function(event) {
+				pageNum = 1;
+				getData();				
+			});
+
+			// 上页按钮单击
+			$('#prevBtn').click(function(event) {
+				pageNum --;
+				getData();				
+			});
+
+			// 下页按钮单击
+			$('#nextBtn').click(function(event) {
+				pageNum ++;
+				getData();				
+			});
+
+			// 末页按钮单击
+			$('#lastBtn').click(function(event) {
+				pageNum = pageCount;
+				getData();				
+			});
+
+			// 页码按钮单击
+			$('#pagerTools').on('click', '.pageNumBtn', function(event) {				
+				pageNum = $(this).text();
+				getData();
+			});
+
+			/*
+				点赞功能
+			*/
+			$('#msg-wrapper').on('click', '.hit-btn', function(event) {
+
+				// 读取本地存储的点赞历史数据
+				var hitIdsStr = sessionStorage.getItem('hitIds');
+
+				var hitIds;//点赞历史记录的id数组
+
+				// 如果是第一次存储，初始化空数组，如果以前有数据，把原来的数据转换为数组
+				if (hitIdsStr == null) {
+					hitIds = [];
+				} else {
+					hitIds = JSON.parse(hitIdsStr);
+				}
+				
+				// 获得操作的数据的id
+				var id = $(this).attr('data-id');
+
+				// 判断id是否在历史记录数组中存在
+				if (hitIds.indexOf(id) != -1) {
+					layer.msg('这条评论已经点过赞了！');
+					return;
+				}
+
+				// 存储id到数组中
+				hitIds.push(id);
+
+				// 重新存储到本地存储
+				sessionStorage.setItem('hitIds',JSON.stringify(hitIds));
+				
+				//发出ajax请求操作后端数据
+				$.get(baseUrl + 'bbs/UpdateHitServlet',{id:id}, function(data) {
+					
+				});
+
+				// 更新前端画面
+				var newHit = parseInt($(this).find('.badge').text()) + 1;
+				$(this).find('.badge').text(newHit);
+
+			});
+
+			/*
+				删除评论数据
+			*/
+			$('#msg-wrapper').on('click', '.del-btn', function(event) {
+
+				// 按钮加载中的状态
+				$(this).button('loading');
+				
+				// 获得操作数据的id
+				var id = $(this).attr('data-id');
+				
+				// 事件源对象赋给本地变量
+				var that = this;
+
+				//发出ajax请求操作后端数据
+				$.get(baseUrl + 'bbs/DeleteMsgServlet',{id:id}, function(data) {					
+					layer.msg('评论已删除');
+					$(that).parents('.panel').remove();
+				});
+			
+			});
+
+
+			//记录修改的评论的panel
+			var currPanel = null;
+
+			/*
+				修改评论按钮单击
+			*/
+			$('#msg-wrapper').on('click', '.update-btn', function(event) {
+
+				// 记录当前修改的面板对象
+				currPanel = $(this).parents('.panel');
+
+				// 打开模态层
+				$('#myModal').modal({
+					backdrop:'static' //点击模态区不关闭
+				});
+
+				// 获得操作数据的id
+				var id = $(this).attr('data-id');
+
+				// 发出ajax请求，获得指定id的数据
+				$.getJSON(baseUrl + 'bbs/GetMsgServlet',{id:id},function(data) {					
+					
+					// 设置表单的数据
+					$('#myModal #username').val( data.username );
+					$('#myModal #content').val( data.content );
+					$('#myModal #id').val( data.id );
+
+				});
+
+			});
+
+			/*
+				修改评论数据
+			*/
+			$('#updateBtn').click(function(event) {
+
+				// 调动验证函数
+				if ( !checkForm() ) {
+					return;
+				}
+
+				// 按钮loading状态
+				$(this).button('loading');
+
+				var that = this;
+				
+				// 请求参数
+				var params = $('#myModal #form1').serialize();
+
+				// 发出ajax请求调用后台接口更新数据
+				$.post(baseUrl + 'bbs/UpdateMsgServlet', params, function(data, textStatus, xhr) {
+					// 按钮恢复默认状态
+					$(that).button('reset');
+					// 成功提示
+					layer.msg('修改评论成功');
+					//  关闭模态层
+					$('#myModal').modal('hide');					
+				});
+
+				// 前端画面更新
+				currPanel.find('.username').text( $('#myModal #username').val() );
+				currPanel.find('.content').text( $('#myModal #content').val() );
+			});
+
+			/**
+				表单验证函数
+			*/
+			function checkForm() {
+
+				// 验证用户名
+				var usernameVal = $('#username').val();
+
+				if (usernameVal == '' || usernameVal.length > 10) {
+					layer.msg('用户名不能为空且最多10个字符');
+					return false;
+				}
+
+				// 验证内容
+				var contentVal = $('#content').val();
+
+				if (contentVal == '' || contentVal.length > 600) {
+					layer.msg('评论内容不能为空且最多600字');
+					return false;
+				}
+
+				return true;
+			}
+
+		});
+
+	</script>
+</body>
+</html>
